@@ -3,12 +3,14 @@ package com.feed.owner.guessthecelebrity;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
+import android.os.CountDownTimer;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -27,13 +29,17 @@ import java.util.regex.Pattern;
 public class MainActivity extends AppCompatActivity {
 
     RelativeLayout guessLayout;
+    LinearLayout layout;
     Button startButton;
     Button button0;
     Button button1;
     Button button2;
     Button button3;
+    Button playAgainButton;
     ImageView celebImage;
     TextView scoreTextView;
+    TextView timerTextView;
+    TextView winnerMessage;
 
     ArrayList<String> celebNames = new ArrayList<String>();
     ArrayList<String> celebURLs = new ArrayList<String>();
@@ -48,6 +54,9 @@ public class MainActivity extends AppCompatActivity {
 
     DownloadTask task;
     DownloadImage imageTask;
+
+    Boolean gameIsActive = true;
+    CountDownTimer countDownTimer;
 
     public class DownloadTask extends AsyncTask<String, Void, String>{
 
@@ -155,16 +164,47 @@ public class MainActivity extends AppCompatActivity {
 
     public void guessClick(View view){
 
-        if (view.getTag().toString().equals(Integer.toString(locationOfCorrectAnswer))){
-            score++;
-            Toast.makeText(getApplicationContext(), "Correct!", Toast.LENGTH_LONG).show();
-        }else {
-            Toast.makeText(getApplicationContext(), "Wrong! It was " + celebNames.get(chosenCeleb), Toast.LENGTH_LONG).show();
-        }
+        if (gameIsActive) {
+            if (view.getTag().toString().equals(Integer.toString(locationOfCorrectAnswer))) {
+                score++;
+                Toast.makeText(getApplicationContext(), "Correct!", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(getApplicationContext(), "Wrong! It was " + celebNames.get(chosenCeleb), Toast.LENGTH_LONG).show();
+            }
 
-        numberOfQuestions++;
-        scoreTextView.setText(Integer.toString(score) + "/" + Integer.toString(numberOfQuestions));
+            numberOfQuestions++;
+            scoreTextView.setText(Integer.toString(score) + "/" + Integer.toString(numberOfQuestions));
+            generateQuestion();
+        }
+    }
+
+    public void playAgain(View view){
+        gameIsActive = true;
+        score = 0;
+        numberOfQuestions = 0;
+
+        timerTextView.setText("60s");
+        scoreTextView.setText("0/0");
+        layout = (LinearLayout) findViewById(R.id.playAgainLayout);
+        winnerMessage = (TextView) findViewById(R.id.winnerMessage);
+        layout.setVisibility(View.INVISIBLE);
         generateQuestion();
+
+        countDownTimer = new CountDownTimer(60100, 1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                timerTextView.setText(String.valueOf(millisUntilFinished/1000) + "s");
+            }
+
+            @Override
+            public void onFinish() {
+                layout.setVisibility(View.VISIBLE);
+                timerTextView.setText("0s");
+                winnerMessage.setText("Your Score: " + Integer.toString(score) + "/" + Integer.toString(numberOfQuestions));
+                gameIsActive = false;
+
+            }
+        }.start();
     }
 
     @Override
@@ -177,12 +217,13 @@ public class MainActivity extends AppCompatActivity {
         button1 = (Button) findViewById(R.id.button1);
         button2 = (Button) findViewById(R.id.button2);
         button3 = (Button) findViewById(R.id.button3);
+        playAgainButton = (Button) findViewById(R.id.playAgainButton);
         guessLayout = (RelativeLayout)findViewById(R.id.guessLayout);
         celebImage = (ImageView) findViewById(R.id.celebImage);
         scoreTextView = (TextView) findViewById(R.id.scoreTextView);
+        timerTextView = (TextView) findViewById(R.id.timerTextView);
 
         task = new DownloadTask();
-        //DownloadTask task2 = new DownloadTask();
 
         String result = null;
 
@@ -205,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
                 celebNames.add(m.group(1));
             }
 
-            generateQuestion();
+            playAgain(findViewById(R.id.playAgainButton));
 
         }catch (Exception e){
             e.printStackTrace();
